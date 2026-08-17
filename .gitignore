@@ -1,17 +1,15 @@
-# API Keys (CRITICAL!)
 .env
-secrets.py
+.env.*
+!.env.example
 
-# Python
-__pycache__/
 venv/
 .venv/
-*.pyc
 
-# Project files to ignore
+__pycache__/
+*.py[cod]
+
 uploads/
 faiss_index/
 
-# OS files
 .DS_Store
 Thumbs.db
