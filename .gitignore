@@ -1,0 +1,17 @@
+# API Keys (CRITICAL!)
+.env
+secrets.py
+
+# Python
+__pycache__/
+venv/
+.venv/
+*.pyc
+
+# Project files to ignore
+uploads/
+faiss_index/
+
+# OS files
+.DS_Store
+Thumbs.db
