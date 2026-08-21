@@ -5,7 +5,7 @@ load_dotenv()
 
 # Groq API
 API_KEY = os.getenv("API_KEY")
-LLM_MODEL = "meta-llama/llama-4-scout-17b-16e-instruct"
+LLM_MODEL = "llama-3.1-8b-instant"
 
 # Chunking settings
 CHUNK_SIZE = 1000
