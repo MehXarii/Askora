@@ -5,7 +5,7 @@ load_dotenv()
 
 # Groq API
 API_KEY = os.getenv("API_KEY")
-LLM_MODEL = "llama-3.1-8b-instant"
+LLM_MODEL = "openai/gpt-oss-20b"
 
 # Chunking settings
 CHUNK_SIZE = 1000
