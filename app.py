@@ -10,10 +10,12 @@ from src.quiz_generator import generate_mcqs, generate_marks_based_questions
 from src.summarizer import summarize_topic, SUMMARY_MODES
 
 
-def load_css(path: str):
-    with open(path) as f:
+def load_css(file_name):
+    with open(file_name) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
+# Ensure the filename matches your GitHub repo exactly (case-sensitive)
+load_css("style.css")
 
 # Custom professional geometric "A" logo for ASKORA
 RAW_SVG = """<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -33,8 +35,6 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
-
-load_css("src/style.css")
 
 # Main Page Header - Tagline structured underneath the brand name
 st.markdown(
