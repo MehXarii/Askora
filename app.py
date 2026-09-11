@@ -355,3 +355,5 @@ if st.session_state.index is not None:
                 "confidence": result["confidence"]
             })
             st.rerun()
+
+            # Mehak Ansari
