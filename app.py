@@ -15,7 +15,7 @@ def load_css(file_name):
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 # Ensure the filename matches your GitHub repo exactly (case-sensitive)
-load_css("style.css")
+load_css("src/style.css")
 
 # Custom professional geometric "A" logo for ASKORA
 RAW_SVG = """<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
