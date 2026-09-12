@@ -9,9 +9,17 @@ from src.retriever import answer_question
 from src.quiz_generator import generate_mcqs, generate_marks_based_questions
 from src.summarizer import summarize_topic, SUMMARY_MODES
 
+# MUST BE THE FIRST STREAMLIT COMMAND:
+st.set_page_config(
+    page_title="Askora",
+    page_icon="🎓",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
-def load_css(path: str):
-    with open(path) as f:
+# NOW load your CSS and other logic below it:
+def load_css(file_name):
+    with open(file_name) as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
 load_css("src/style.css")
@@ -27,13 +35,6 @@ RAW_SVG = """<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 # Convert SVG to Base64 to safely embed as Favicon and Sidebar Image
 B64_SVG = base64.b64encode(RAW_SVG.encode("utf-8")).decode("utf-8")
 SVG_DATA_URI = f"data:image/svg+xml;base64,{B64_SVG}"
-
-st.set_page_config(
-    page_title="Askora",
-    page_icon=SVG_DATA_URI,
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
 
 # Main Page Header - Tagline structured underneath the brand name
 st.markdown(
