@@ -35,14 +35,6 @@ RAW_SVG = """<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 B64_SVG = base64.b64encode(RAW_SVG.encode("utf-8")).decode("utf-8")
 SVG_DATA_URI = f"data:image/svg+xml;base64,{B64_SVG}"
 
-
-st.set_page_config(
-    page_title="Askora",
-    page_icon=SVG_DATA_URI,
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
 # Main Page Header - Tagline structured underneath the brand name
 st.markdown(
     f"""
