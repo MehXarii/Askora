@@ -4,14 +4,21 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-# Read API_KEY or GROQ_API_KEY from local .env or Streamlit Secrets
-API_KEY = (
-    os.getenv("API_KEY") 
-    or os.getenv("GROQ_API_KEY") 
-    or st.secrets.get("API_KEY") 
-    or st.secrets.get("GROQ_API_KEY")
-)
+# Check Streamlit Cloud Secrets safely without throwing key errors
+API_KEY = None
+try:
+    if "API_KEY" in st.secrets:
+        API_KEY = st.secrets["API_KEY"]
+    elif "GROQ_API_KEY" in st.secrets:
+        API_KEY = st.secrets["GROQ_API_KEY"]
+except Exception:
+    pass
 
+# Fallback to local environment variables if Secrets isn't available
+if not API_KEY:
+    API_KEY = os.getenv("API_KEY") or os.getenv("GROQ_API_KEY")
+
+# Official Groq model identifier
 LLM_MODEL = "llama-3.3-70b-versatile"
 
 # Chunking settings

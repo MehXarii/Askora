@@ -4,16 +4,22 @@ from groq import Groq
 from config import API_KEY, LLM_MODEL, TOP_K_RESULTS
 from src.embeddings import search_index
 
-# Fallback check to ensure API_KEY is set in production
-RESOLVED_API_KEY = (
-    API_KEY 
-    or os.getenv("API_KEY") 
-    or os.getenv("GROQ_API_KEY") 
-    or st.secrets.get("API_KEY") 
-    or st.secrets.get("GROQ_API_KEY")
-)
+# Double-check resolution of key at execution time
+def get_groq_client():
+    key = API_KEY
+    if not key:
+        try:
+            if "API_KEY" in st.secrets:
+                key = st.secrets["API_KEY"]
+            elif "GROQ_API_KEY" in st.secrets:
+                key = st.secrets["GROQ_API_KEY"]
+        except Exception:
+            pass
+    if not key:
+        key = os.getenv("API_KEY") or os.getenv("GROQ_API_KEY")
+    return Groq(api_key=key)
 
-client = Groq(api_key=RESOLVED_API_KEY)
+client = get_groq_client()
 
 
 def build_context(chunks: list[dict]) -> str:
@@ -117,7 +123,7 @@ Current Question: {query}"""
         elif "authentication" in str(e).lower() or "401" in str(e) or "invalid" in str(e).lower() or "groqerror" in error_type.lower():
             return {
                 "error": True,
-                "message": "🔑 Authentication Error: Missing or invalid API key. Please check your configuration."
+                "message": "🔑 Authentication Error: Missing or invalid API key. Please check your Streamlit Secrets."
             }
         else:
             return {
