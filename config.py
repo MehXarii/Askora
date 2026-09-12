@@ -1,11 +1,18 @@
 import os
+import streamlit as st
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Groq API
-API_KEY = os.getenv("API_KEY")
-LLM_MODEL = "openai/gpt-oss-20b"
+# Read API_KEY or GROQ_API_KEY from local .env or Streamlit Secrets
+API_KEY = (
+    os.getenv("API_KEY") 
+    or os.getenv("GROQ_API_KEY") 
+    or st.secrets.get("API_KEY") 
+    or st.secrets.get("GROQ_API_KEY")
+)
+
+LLM_MODEL = "llama-3.3-70b-versatile"
 
 # Chunking settings
 CHUNK_SIZE = 1000

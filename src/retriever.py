@@ -1,8 +1,19 @@
+import os
+import streamlit as st
 from groq import Groq
 from config import API_KEY, LLM_MODEL, TOP_K_RESULTS
 from src.embeddings import search_index
 
-client = Groq(api_key=API_KEY)
+# Fallback check to ensure API_KEY is set in production
+RESOLVED_API_KEY = (
+    API_KEY 
+    or os.getenv("API_KEY") 
+    or os.getenv("GROQ_API_KEY") 
+    or st.secrets.get("API_KEY") 
+    or st.secrets.get("GROQ_API_KEY")
+)
+
+client = Groq(api_key=RESOLVED_API_KEY)
 
 
 def build_context(chunks: list[dict]) -> str:
@@ -103,10 +114,10 @@ Current Question: {query}"""
                 "error": True,
                 "message": "⏱️ Rate Limit: Too many requests. Please wait a moment and try again."
             }
-        elif "authentication" in str(e).lower() or "401" in str(e) or "invalid" in str(e).lower():
+        elif "authentication" in str(e).lower() or "401" in str(e) or "invalid" in str(e).lower() or "groqerror" in error_type.lower():
             return {
                 "error": True,
-                "message": "🔑 Authentication Error: Invalid API key. Please check your .env file and restart the app."
+                "message": "🔑 Authentication Error: Missing or invalid API key. Please check your configuration."
             }
         else:
             return {
