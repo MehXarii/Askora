@@ -1,25 +1,78 @@
 import os
 import streamlit as st
+import groq
 from groq import Groq
 from config import API_KEY, LLM_MODEL, TOP_K_RESULTS
 from src.embeddings import search_index
 
-# Double-check resolution of key at execution time
-def get_groq_client():
-    key = API_KEY
+
+def _clean_key(key):
+    """Remove stray spaces, newlines and quotes that often sneak in when pasting."""
+    if not key:
+        return None
+    return str(key).strip().strip('"').strip("'").strip()
+
+
+def resolve_api_key():
+    key = _clean_key(API_KEY)
     if not key:
         try:
-            if "API_KEY" in st.secrets:
-                key = st.secrets["API_KEY"]
-            elif "GROQ_API_KEY" in st.secrets:
-                key = st.secrets["GROQ_API_KEY"]
+            for name in ("API_KEY", "GROQ_API_KEY"):
+                if name in st.secrets:
+                    key = _clean_key(st.secrets[name])
+                    break
         except Exception:
             pass
     if not key:
-        key = os.getenv("API_KEY") or os.getenv("GROQ_API_KEY")
+        key = _clean_key(os.getenv("API_KEY") or os.getenv("GROQ_API_KEY"))
+    return key
+
+
+def get_groq_client():
+    key = resolve_api_key()
+    if not key:
+        return None
     return Groq(api_key=key)
 
-client = get_groq_client()
+
+def list_chat_models(client) -> list:
+    """Ask Groq which models this key can actually use."""
+    try:
+        models = client.models.list()
+        ids = [m.id for m in models.data]
+        skip = ("whisper", "orpheus", "guard", "tts")
+        return [i for i in ids if not any(s in i.lower() for s in skip)]
+    except Exception:
+        return []
+
+
+def describe_groq_error(e: Exception, client) -> str:
+    if isinstance(e, groq.AuthenticationError):
+        key = resolve_api_key() or ""
+        return (
+            f"Groq rejected the API key (401). The key the app loaded is {len(key)} "
+            f"characters long and starts with {key[:4]!r}. A valid Groq key starts with 'gsk_'. "
+            "Create a new key at console.groq.com, paste it into Streamlit Secrets as "
+            'API_KEY = "gsk_..." on a single line, save, then reboot the app.'
+        )
+    if isinstance(e, groq.NotFoundError):
+        available = list_chat_models(client)
+        msg = f"The model '{LLM_MODEL}' is not available on this Groq account (404)."
+        if available:
+            msg += (
+                " Models your key can use: " + ", ".join(available[:12])
+                + ". Copy one into LLM_MODEL in config.py."
+            )
+        return msg
+    if isinstance(e, groq.PermissionDeniedError):
+        return "Your Groq account is not allowed to use this model (403). Choose another model in config.py."
+    if isinstance(e, groq.RateLimitError):
+        return "Rate limit reached (429). Wait a minute and try again."
+    if isinstance(e, (groq.APIConnectionError, groq.APITimeoutError)):
+        return "Could not reach Groq. Check the internet connection and try again."
+    if isinstance(e, groq.BadRequestError):
+        return f"Groq rejected the request (400): {str(e)[:200]}"
+    return f"Unexpected error ({type(e).__name__}): {str(e)[:200]}"
 
 
 def build_context(chunks: list[dict]) -> str:
@@ -71,6 +124,13 @@ def build_chat_history_messages(chat_history: list[dict]) -> list[dict]:
 
 
 def answer_question(query: str, index, chunks: list[dict], chat_history: list[dict] = None) -> dict:
+    client = get_groq_client()
+    if client is None:
+        return {
+            "error": True,
+            "message": "No API key found. Add API_KEY to your Streamlit Secrets, save, and reboot the app."
+        }
+
     relevant_chunks = search_index(query, index, chunks, top_k=TOP_K_RESULTS)
 
     if not relevant_chunks:
@@ -109,27 +169,7 @@ Current Question: {query}"""
             messages=messages
         )
     except Exception as e:
-        error_type = type(e).__name__
-        if "Connection" in error_type or "timeout" in str(e).lower():
-            return {
-                "error": True,
-                "message": "🌐 Connection Error: Unable to reach the AI service. Please check your internet connection and try again."
-            }
-        elif "rate_limit" in str(e).lower() or "429" in str(e):
-            return {
-                "error": True,
-                "message": "⏱️ Rate Limit: Too many requests. Please wait a moment and try again."
-            }
-        elif "authentication" in str(e).lower() or "401" in str(e) or "invalid" in str(e).lower() or "groqerror" in error_type.lower():
-            return {
-                "error": True,
-                "message": "🔑 Authentication Error: Missing or invalid API key. Please check your Streamlit Secrets."
-            }
-        else:
-            return {
-                "error": True,
-                "message": f"⚠️ Error: {str(e)[:100]}"
-            }
+        return {"error": True, "message": describe_groq_error(e, client)}
 
     sources = []
     seen = set()
@@ -146,7 +186,7 @@ Current Question: {query}"""
 
     return {
         "error": False,
-        "answer": response.choices[0].message.content,
+        "answer": response.choices[0].message.content or "The model returned an empty answer. Please try again.",
         "sources": sources,
         "confidence": confidence
     }
