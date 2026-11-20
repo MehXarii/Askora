@@ -18,8 +18,8 @@ except Exception:
 if not API_KEY:
     API_KEY = os.getenv("API_KEY") or os.getenv("GROQ_API_KEY")
 
-# Official Groq model identifier
-LLM_MODEL = "llama-3.3-70b-versatile"
+# Model available on this Groq account (copied from the app's own error message)
+LLM_MODEL = "openai/gpt-oss-120b"
 
 # Chunking settings
 CHUNK_SIZE = 1000
