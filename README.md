@@ -1,26 +1,27 @@
-# Askora — AI Academic Assistant
+# Askora: AI Academic Assistant
 
 > AI That Actually Reads With You
 
-🔗 **Live Demo:** https://askora-chatbot.streamlit.app/
+**Live Demo:** https://askora-bot.streamlit.app/
 
 ---
 
 ## Overview
 
-**Askora** is an AI-powered academic assistant built with **Python and Streamlit**. It uses a **Retrieval-Augmented Generation (RAG)** workflow to help students interact with their own course material — answering questions, generating quizzes, and summarizing topics with source citations.
+Askora is an AI study assistant built with Python and Streamlit. Students upload their own lecture material (PDF, DOCX or PPTX), and Askora answers questions from it, builds quizzes, writes summaries, and turns slides into flashcards and revision sheets. It uses Retrieval-Augmented Generation (RAG), so every answer comes from the uploaded files and shows the source file and page number.
 
 ---
 
 ## Key Features
 
-- **Context-Aware Q&A** — Ask anything from your uploaded documents, get cited answers
-- **Auto Quiz Generator** — MCQs and marks-based questions (2, 5, 10 marks) from your material
-- **Smart Summarizer** — Detailed, Bullet Points, or ELI5 summaries on any topic
-- **Confidence Scoring** — Every answer comes with a relevance confidence bar
-- **Citation-Based Answers** — Shows exact source file and page number
-- **Multi-Document Search** — Upload and search across multiple files at once
-- **Supports PDF, DOCX, PPTX** — The three most common student file formats
+- **Ask Askora:** Ask questions in plain language and get answers with source file, page number and a short snippet of the matching text.
+- **Confidence Score:** Each answer shows a color-coded relevance bar (green, orange or red), so students can see how well the notes support the answer.
+- **Quiz Generator:** MCQs and 2, 5 and 10 mark questions with model answers, created from the uploaded material.
+- **Summarizer:** Detailed, Bullet Points or ELI5 summaries of any topic.
+- **Revise:** Flashcards that use the wording from the slides. Cards marked "Again" come back at the end of the deck. A one-page revision sheet with definitions, lists to memorize, comparisons and likely exam questions can be downloaded.
+- **Multi-Document Search:** Search across several files at once.
+- **Scanned PDF Support:** OCR fallback for image-based pages.
+- **Formats:** PDF, DOCX and PPTX.
 
 ---
 
@@ -29,71 +30,73 @@
 | Technology | Purpose |
 |---|---|
 | Python | Core application logic |
-| Streamlit | Web application interface |
-| Groq API | Fast LLM inference engine |
-| GPT OSS 20B | Large language model (via Groq) |
-| FAISS | Vector similarity search |
+| Streamlit | Web interface |
+| Groq API | Fast LLM inference |
+| GPT OSS 120B | Language model used for answers, quizzes, summaries and revision material |
+| FAISS | Vector similarity search (cosine similarity) |
 | Sentence Transformers | Text embeddings (all-MiniLM-L6-v2) |
-| LangChain | Document loading and chunking |
+| LangChain Text Splitters | Document chunking |
 | PyMuPDF | PDF text extraction |
-| Tesseract OCR | Fallback for scanned PDFs |
+| Tesseract OCR + pdf2image | Text extraction from scanned PDFs |
+| python-docx, python-pptx | Word and PowerPoint text extraction |
 
 ---
 
 ## How It Works
 
-Academic Documents (PDF / DOCX / PPTX)
-↓
-Text Extraction (PyMuPDF / python-docx)
-↓
-Chunking (LangChain RecursiveCharacterTextSplitter)
-↓
-Embeddings (Sentence Transformers — all-MiniLM-L6-v2)
-↓
-FAISS Vector Index (cosine similarity)
-↓
-Semantic Retrieval (top-k relevant chunks)
-↓
-GPT OSS 20B via Groq API
-↓
-Answer + Confidence Score + Source Citation
-
+```
+Uploaded files (PDF / DOCX / PPTX)
+            |
+   Text extraction (OCR for scanned pages)
+            |
+   Chunking with overlap
+            |
+   Embeddings (all-MiniLM-L6-v2)
+            |
+   FAISS index (cosine similarity)
+            |
+   Semantic retrieval of the top matching chunks
+            |
+   GPT OSS 120B via Groq
+            |
+   Answer, quiz, summary or flashcards
+   with confidence score and sources
+```
 
 ---
 
 ## Project Structure
 
+```
 Askora/
-│
-├── app.py
-├── config.py
-├── requirements.txt
-├── packages.txt
-├── .gitignore
-├── README.md
-│
-├── .streamlit/
-│ └── config.toml
-│
-├── screenshots/
-│ ├── interface.png
-│ ├── ask.png
-│ ├── quiz.png
-│ └── summarizer.png
-│
-└── src/
-├── init.py
-├── embeddings.py
-├── pdf_processor.py
-├── quiz_generator.py
-├── retriever.py
-├── summarizer.py
-└── style.css
-
+|-- app.py
+|-- config.py
+|-- requirements.txt
+|-- packages.txt
+|-- .gitignore
+|-- README.md
+|-- .streamlit/
+|   `-- config.toml
+|-- screenshots/
+|   |-- interface.png
+|   |-- ask.png
+|   |-- quiz.png
+|   |-- summarizer.png
+|   `-- revise.png
+`-- src/
+    |-- __init__.py
+    |-- embeddings.py
+    |-- pdf_processor.py
+    |-- quiz_generator.py
+    |-- retriever.py
+    |-- revision.py
+    |-- summarizer.py
+    `-- style.css
+```
 
 ---
 
-## Application Screenshots
+## Screenshots
 
 ### Main Interface
 ![Askora Interface](screenshots/interface.png)
@@ -107,11 +110,15 @@ Askora/
 ### Summarizer
 ![Askora Summarizer](screenshots/summarizer.png)
 
+### Revise
+![Askora Revise](screenshots/revise.png)
+
 ---
 
-## Installation
+## Run Locally
 
 ### 1. Clone the repository
+
 ```bash
 git clone https://github.com/MehXarii/Askora.git
 cd Askora
@@ -120,83 +127,99 @@ cd Askora
 ### 2. Create a virtual environment
 
 Windows:
+
 ```bash
 python -m venv venv
 venv\Scripts\activate
 ```
 
 ### 3. Install dependencies
+
 ```bash
 pip install -r requirements.txt
 ```
 
-### 4. Configure environment variables
+### 4. Install OCR tools (only needed for scanned PDFs)
+
+- Install [Tesseract OCR](https://github.com/tesseract-ocr/tesseract) and [Poppler](https://github.com/oschwartz10612/poppler-windows), and make sure both are available on your system PATH.
+
+### 5. Add your API key
 
 Create a `.env` file in the project root:
+
 ```env
 API_KEY=your_groq_api_key_here
 ```
 
-Get your free Groq API key at [console.groq.com](https://console.groq.com)
+Get a free key at [console.groq.com](https://console.groq.com). Never commit the `.env` file.
 
-Do **not** commit your `.env` file to GitHub.
+### 6. Start the app
 
-### 5. Run the application
 ```bash
 streamlit run app.py
 ```
 
 ---
 
-## Deployment
+## Deploy on Streamlit Cloud
 
-Deployed on **Streamlit Cloud**.
+1. Push the project to GitHub.
+2. Go to [share.streamlit.io](https://share.streamlit.io) and create a new app from your repository, with `app.py` as the main file.
+3. Open Advanced settings, then Secrets, and add:
 
-To deploy your own instance:
-1. Fork this repository
-2. Go to [share.streamlit.io](https://share.streamlit.io)
-3. Connect your GitHub repo
-4. Add your `API_KEY` in Streamlit Secrets
-5. Deploy
+```toml
+API_KEY = "your_groq_api_key_here"
+```
+
+4. Deploy. The `packages.txt` file installs Tesseract and Poppler on the server automatically.
+
+---
+
+## Model Configuration
+
+The model name is set in `config.py`:
+
+```python
+LLM_MODEL = "openai/gpt-oss-120b"
+```
+
+Groq changes the models available to each account over time. If the app shows a "model not available" message, it lists the models your key can use. Copy one of those names into `LLM_MODEL`.
 
 ---
 
 ## Use Cases
 
-- Exam preparation from lecture notes
-- Generating practice quizzes instantly
-- Understanding complex topics through ELI5 summaries
-- Searching across multiple course PDFs at once
-- Revision before exams
+- Exam preparation from lecture slides
+- Quick revision with flashcards and one-page sheets
+- Practice questions in the 2, 5 and 10 mark format
+- Searching across several course files at once
 
 ---
 
 ## Security
 
-API credentials are stored in environment variables and excluded from version control via `.gitignore`. Never commit API keys to GitHub.
+API keys are kept in environment variables or Streamlit Secrets and are excluded from version control through `.gitignore`. Never commit keys to the repository.
 
 ---
 
 ## Future Improvements
 
-- Multi-language support
-- Voice input for questions
-- Export quiz as PDF
-- User authentication
-- Advanced study analytics
-- Personalized learning recommendations
+- Urdu explanations
+- Exporting quizzes as Word or PDF files
+- User accounts and saved study sessions
+- Study progress tracking
 
 ---
 
 ## Author
 
 **Mehak Ansari**
-BSCS Student | AI & Computer Science
-University of Central Punjab, Rawalpindi
+BSCS, University of Central Punjab, Rawalpindi
 
 GitHub: [@MehXarii](https://github.com/MehXarii)
 
 ---
+
 ## License
 
 This project is available for educational and portfolio purposes.
