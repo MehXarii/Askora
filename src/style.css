@@ -178,16 +178,29 @@ h2, h3 {
     color: var(--slate-900) !important;
 }
 
-/* ─── Chat Input ────────────────────────────────────────────── */
+/* ─── Chat Input Fix (Removes Double Focus Border) ─────────── */
 [data-testid="stChatInput"] {
     border-radius: var(--radius-md) !important;
     border: 1.5px solid var(--slate-100) !important;
     box-shadow: var(--shadow-md) !important;
     background: var(--white) !important;
+    outline: none !important;
 }
 
 [data-testid="stChatInput"]:focus-within {
     border-color: var(--blue-600) !important;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2) !important;
+    outline: none !important;
+}
+
+[data-testid="stChatInput"] textarea {
+    outline: none !important;
+    box-shadow: none !important;
+}
+
+[data-testid="stChatInput"] textarea:focus {
+    outline: none !important;
+    box-shadow: none !important;
 }
 
 /* ─── Text Inputs ───────────────────────────────────────────── */
@@ -200,6 +213,7 @@ h2, h3 {
     color: var(--slate-900) !important;
     padding: 0.5rem 0.75rem !important;
     transition: border-color 0.15s ease !important;
+    outline: none !important;
 }
 
 [data-testid="stTextInput"] input:focus {
