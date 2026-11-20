@@ -8,20 +8,7 @@ from src.embeddings import build_faiss_index, load_faiss_index, index_exists
 from src.retriever import answer_question
 from src.quiz_generator import generate_mcqs, generate_marks_based_questions
 from src.summarizer import summarize_topic, SUMMARY_MODES
-
-# MUST BE THE FIRST STREAMLIT COMMAND:
-st.set_page_config(
-    page_title="Askora",
-    page_icon="🎓",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-def load_css(file_name):
-    with open(file_name) as f:
-        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
-
-load_css("src/style.css")
+from src.revision import generate_flashcards, generate_revision_sheet
 
 # Custom professional geometric "A" logo for ASKORA
 RAW_SVG = """<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
@@ -34,6 +21,22 @@ RAW_SVG = """<svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
 # Convert SVG to Base64 to safely embed as Favicon and Sidebar Image
 B64_SVG = base64.b64encode(RAW_SVG.encode("utf-8")).decode("utf-8")
 SVG_DATA_URI = f"data:image/svg+xml;base64,{B64_SVG}"
+
+# MUST BE THE FIRST STREAMLIT COMMAND:
+st.set_page_config(
+    page_title="Askora",
+    page_icon=SVG_DATA_URI,
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+
+def load_css(file_name):
+    with open(file_name) as f:
+        st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
+
+
+load_css("src/style.css")
 
 # Main Page Header - Tagline structured underneath the brand name
 st.markdown(
@@ -51,6 +54,7 @@ st.markdown(
 
 st.divider()
 
+# ─── Session State ───────────────────────────────────────────
 if "index" not in st.session_state:
     st.session_state.index = None
 if "chunks" not in st.session_state:
@@ -61,6 +65,22 @@ if "last_quiz" not in st.session_state:
     st.session_state.last_quiz = None
 if "last_summary" not in st.session_state:
     st.session_state.last_summary = None
+
+# Revise tab state
+if "cards" not in st.session_state:
+    st.session_state.cards = []
+if "cards_original" not in st.session_state:
+    st.session_state.cards_original = []
+if "card_i" not in st.session_state:
+    st.session_state.card_i = 0
+if "show_back" not in st.session_state:
+    st.session_state.show_back = False
+if "got_it" not in st.session_state:
+    st.session_state.got_it = 0
+if "revision_sheet" not in st.session_state:
+    st.session_state.revision_sheet = None
+if "revise_sources" not in st.session_state:
+    st.session_state.revise_sources = []
 
 
 def render_confidence(conf: dict):
@@ -115,11 +135,42 @@ def reset_project():
         st.session_state.chat_history = []
         st.session_state.last_quiz = None
         st.session_state.last_summary = None
+        st.session_state.cards = []
+        st.session_state.cards_original = []
+        st.session_state.card_i = 0
+        st.session_state.show_back = False
+        st.session_state.got_it = 0
+        st.session_state.revision_sheet = None
+        st.session_state.revise_sources = []
         st.success("Project reset. Ready for a fresh session.")
     except Exception as e:
         st.error(f"Reset failed: {str(e)}")
 
 
+# ─── Flashcard callbacks ─────────────────────────────────────
+def flip_card():
+    st.session_state.show_back = not st.session_state.show_back
+
+
+def next_card(known: bool):
+    i = st.session_state.card_i
+    if known:
+        st.session_state.got_it += 1
+    else:
+        # Missed cards go to the back of the deck so they come around again
+        st.session_state.cards.append(st.session_state.cards[i])
+    st.session_state.card_i += 1
+    st.session_state.show_back = False
+
+
+def restart_deck():
+    st.session_state.cards = list(st.session_state.cards_original)
+    st.session_state.card_i = 0
+    st.session_state.got_it = 0
+    st.session_state.show_back = False
+
+
+# ─── Sidebar ─────────────────────────────────────────────────
 with st.sidebar:
     # Sidebar Minimal Logo Brand Mark
     sidebar_html = f'<div style="display:flex; align-items:center; margin-bottom:1.5rem; padding-bottom:1.2rem; border-bottom:1px solid #E2E8F0;"><img src="{SVG_DATA_URI}" width="44" style="border-radius:8px;"/></div>'
@@ -186,7 +237,8 @@ with st.sidebar:
         unsafe_allow_html=True
     )
 
-tab1, tab2, tab3 = st.tabs(["Ask Askora", "Quiz Generator", "Summarizer"])
+# ─── Tabs ────────────────────────────────────────────────────
+tab1, tab2, tab3, tab4 = st.tabs(["Ask Askora", "Quiz Generator", "Summarizer", "Revise"])
 
 with tab1:
     st.subheader("Ask anything from your documents")
@@ -333,6 +385,79 @@ with tab3:
             )
             st.markdown(s_data["text"])
 
+with tab4:
+    st.subheader("Revise")
+    st.caption("Turn your slides into flashcards and a one-page revision sheet, using the wording from your own notes.")
+
+    if st.session_state.index is None:
+        st.warning("Upload and process your documents to get started.")
+    else:
+        rev_topic = st.text_input("Topic", placeholder="e.g. OSI Model", key="rev_topic")
+        rev_mode = st.radio("Format", ["Flashcards", "Revision Sheet"], horizontal=True)
+
+        num_cards = 10
+        if rev_mode == "Flashcards":
+            num_cards = st.slider("Number of cards", 5, 20, 10)
+
+        if st.button("Generate", type="primary", key="rev_generate"):
+            if not rev_topic.strip():
+                st.error("Enter a topic first.")
+            else:
+                with st.spinner("Preparing your revision material..."):
+                    if rev_mode == "Flashcards":
+                        res = generate_flashcards(
+                            rev_topic, num_cards,
+                            st.session_state.index, st.session_state.chunks
+                        )
+                    else:
+                        res = generate_revision_sheet(
+                            rev_topic,
+                            st.session_state.index, st.session_state.chunks
+                        )
+
+                if res.get("error"):
+                    st.error(res["message"])
+                else:
+                    st.session_state.revise_sources = res["sources"]
+                    if rev_mode == "Flashcards":
+                        st.session_state.cards_original = list(res["cards"])
+                        restart_deck()
+                    else:
+                        st.session_state.revision_sheet = res["sheet"]
+
+        if rev_mode == "Flashcards" and st.session_state.cards:
+            cards = st.session_state.cards
+            i = st.session_state.card_i
+
+            if i >= len(cards):
+                st.success(f"Deck finished. You marked {st.session_state.got_it} cards as known.")
+                st.button("Restart deck", on_click=restart_deck)
+            else:
+                card = cards[i]
+                st.caption(f"Card {i + 1} of {len(cards)}")
+                st.markdown(f"### {card['front']}")
+
+                if st.session_state.show_back:
+                    st.info(card["back"])
+                    c1, c2 = st.columns(2)
+                    c1.button("Got it", on_click=next_card, args=(True,), use_container_width=True)
+                    c2.button("Again", on_click=next_card, args=(False,), use_container_width=True)
+                else:
+                    st.button("Show answer", on_click=flip_card, type="primary")
+
+        if rev_mode == "Revision Sheet" and st.session_state.revision_sheet:
+            st.markdown(st.session_state.revision_sheet)
+            st.download_button(
+                "Download sheet",
+                data=st.session_state.revision_sheet,
+                file_name="askora_revision_sheet.md",
+                mime="text/markdown",
+            )
+
+        if st.session_state.revise_sources:
+            render_sources(st.session_state.revise_sources)
+
+# ─── Chat input: must stay last and outside the tabs so it docks to the bottom ───
 if st.session_state.index is not None:
     question = st.chat_input("Ask a question from your course material...")
     if question:
