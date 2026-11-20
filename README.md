@@ -2,7 +2,7 @@
 
 > AI That Actually Reads With You
 
-🔗 **Live Demo:** https://askora-chatbot.streamlit.app/
+🔗 **Live Demo:** https://askora-bot.streamlit.app/
 
 ---
 
