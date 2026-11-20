@@ -18,11 +18,6 @@ except Exception:
 if not API_KEY:
     API_KEY = os.getenv("API_KEY") or os.getenv("GROQ_API_KEY")
 
-<<<<<<< HEAD
-# Model available on this Groq account (copied from the app's own error message)
-=======
-# Model available on this Groq account (from the app's own error message)
->>>>>>> 05825cd (Add Revise tab with flashcards and revision sheets)
 LLM_MODEL = "openai/gpt-oss-120b"
 
 # Chunking settings
